@@ -1,0 +1,7 @@
+selenium>=4.25,<5
+pytest>=8,<10
+Flask>=3,<4
+razorpay>=2,<3
+python-dotenv>=1,<2
+requests>=2,<3
+pytest-html

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Payment Automation Framework</title>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 35px;
+            width: 350px;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #222;
+        }
+
+        .price {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 25px 0;
+        }
+
+        button {
+            background: #3399cc;
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            width: 100%;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2277aa;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Demo Store</h1>
+
+        <p>Payment Automation Testing Product</p>
+
+        <div class="price">â‚¹499</div>
+
+        <button id="pay-button" onclick="startPayment()">
+
+            Pay Now
+
+        </button>
+
+        <p id="status" role="status"></p>
+
+    </div>
+
+
+    <script>
+        let paymentRequestKey = sessionStorage.getItem("payment_request_key");
+
+        if (!paymentRequestKey) {
+            paymentRequestKey = crypto.randomUUID();
+            sessionStorage.setItem("payment_request_key", paymentRequestKey);
+        }
+
+        async function startPayment() {
+
+            const button = document.getElementById("pay-button");
+
+            const status = document.getElementById("status");
+
+            button.disabled = true;
+
+            status.innerText = "Creating payment order...";
+
+            try {
+
+
+                const response = await fetch("/create-order", {
+                    method: "POST",
+                    headers: {
+                        "Idempotency-Key": paymentRequestKey
+                    }
+                });
+
+                const order = await response.json();
+
+                if (!response.ok || !order.success) {
+                    throw new Error(order.message || "Order creation failed");
+                }
+
+                const options = {
+
+                    key: order.key,
+
+                    amount: order.amount,
+
+                    currency: order.currency,
+
+                    name: "Demo Store",
+
+                    description: "Payment Automation Test",
+
+                    order_id: order.order_id,
+
+                    handler: function (response) {
+
+                        status.innerText =
+                            "Payment authorized. Verifying payment...";
+
+                        fetch("/verify-payment", {
+
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+
+                            body: JSON.stringify(response)
+
+                        })
+                        .then(async result => {
+
+                            const data = await result.json();
+
+                            if (!result.ok || !data.success) {
+                                throw new Error("Payment verification failed");
+                            }
+
+                            status.innerText = "Payment Successful! Signature Verified.";
+
+                        })
+                        .catch(() => {
+
+                            status.innerText = "Payment verification failed.";
+
+                        });
+
+                    },
+
+                    modal: {
+
+                        ondismiss: function () {
+
+                            status.innerText = "Payment window closed.";
+
+                            button.disabled = false;
+
+                        }
+
+                    },
+
+                    theme: {
+                        color: "#3399cc"
+                    }
+
+                };
+
+                const checkout = new Razorpay(options);
+
+                checkout.on("payment.failed", function (response) {
+
+                status.innerText = "Payment Failed! Please try again.";
+
+                // Generate a fresh key for the next payment attempt
+                paymentRequestKey = crypto.randomUUID();
+
+                sessionStorage.setItem(
+                    "payment_request_key",
+                    paymentRequestKey
+                );
+
+                button.disabled = false;
+
+                });
+
+                checkout.open();
+
+            }
+
+            catch (error) {
+
+                status.innerText = error.message;
+
+                button.disabled = false;
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>
