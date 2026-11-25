@@ -5,7 +5,7 @@ A Python-based payment automation testing framework that integrates **Razorpay T
 The project demonstrates UI automation, API testing, payment verification, idempotency, retry handling, and end-to-end payment testing.
 
 ---
-
+Demo Vedio : https://drive.google.com/file/d/17IW9RIlPcDZyEoi7QtGcUZ6pew9V3FyL/view?usp=sharing
 ## Project Overview
 
 The framework simulates an online checkout experience where users can initiate a payment, complete the Razorpay test payment process, and verify the payment response.
